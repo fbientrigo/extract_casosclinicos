@@ -1,0 +1,28 @@
+book_id: "synthetic-academic-book-v1"
+source_pdf: "data/raw/synthetic_book.pdf"
+languages:
+  - "spa"
+  - "eng"
+page_offset: 0
+
+chapters:
+  - chapter_id: "ch01"
+    title: "Introduccion"
+    start_page: 1
+    end_page: 12
+  - chapter_id: "ch02"
+    title: "Casos Basicos"
+    start_page: 13
+    end_page: 28
+
+ocr_profile: "balanced_multilang"
+
+outputs:
+  chapters_dir: "data/chapters"
+  pages_dir: "data/pages"
+  ocr_dir: "data/ocr"
+  markdown_dir: "data/markdown"
+  json_dir: "data/json"
+  index_dir: "data/index"
+  reports_dir: "reports"
+

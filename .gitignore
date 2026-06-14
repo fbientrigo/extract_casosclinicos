@@ -1,0 +1,98 @@
+# =============================================================================
+# scanbook-rag-lab .gitignore
+#
+# Publish-safety is the #1 rule of this repo: it ships ONLY the architecture
+# (pipeline code, configs, schemas, tests, synthetic examples, agent interface).
+# It must NEVER commit copyrighted books, the PDFs split from them, OCR text,
+# extracted clinical-case text, embeddings, databases, or page renders.
+# =============================================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Virtual envs / tool caches (local only) ---
+.venv/
+venv/
+.uv-cache/
+.uv-python/
+.antigravitycli/
+.code-review-graph/
+
+# --- Editors / OS ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.ipynb_checkpoints/
+
+# =============================================================================
+# COPYRIGHTED / DERIVED DATA — never commit
+# =============================================================================
+
+# Source books and everything split or derived from them (whole trees).
+/book/
+/book_cases_clean/
+
+# Root data tree: runtime OCR/index/db outputs + any copyrighted-derived data.
+# Keep the folder present (with its README and book reference catalog).
+/data/*
+!/data/README.md
+!/data/BOOKS_REFERENCE.md
+
+# Root book manifests reference the copyrighted book's section/case structure.
+/book_split_execute_manifest.json
+/book_split_dryrun_manifest.json
+/book_split_manifest*.yaml
+
+# --- Scratch / temporary working files ---
+/scratch/
+
+# --- Agent interface scaffold: ignore its data, keep its code ---
+/0_interfaz_clinical_cases_llmwiki_scaffold/book/
+/0_interfaz_clinical_cases_llmwiki_scaffold/llm_wiki/
+/0_interfaz_clinical_cases_llmwiki_scaffold/archive/
+/0_interfaz_clinical_cases_llmwiki_scaffold/data/*
+!/0_interfaz_clinical_cases_llmwiki_scaffold/data/manifest.example.json
+/0_interfaz_clinical_cases_llmwiki_scaffold/data_updated/*
+!/0_interfaz_clinical_cases_llmwiki_scaffold/data_updated/.gitkeep
+
+# --- Book-specific local job scripts (kept on disk, NOT published) ---
+# These hardcode a specific copyrighted book's title/author. The generic
+# architecture lives in src/scanbook and the documented CLI instead.
+/scripts/generate_oftalmologia_qa.py
+/scripts/generate_oftalmologia_manifest.py
+/scripts/split_section2_dryrun.py
+
+# --- Binary / generated assets (defense in depth, anywhere in the tree) ---
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.tiff
+*.db
+*.sqlite
+*.duckdb
+*.duckdb.wal
+*.faiss
+*.parquet
+*.pkl
+*.npy
+*.npz
+
+# --- Local model files (optional local LLM) ---
+*.gguf
+models/
+
+# --- Reports outputs (generated) ---
+/reports/qa_summary.json
+/reports/qa_summary.md

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/clinical_case.schema.json",
+  "title": "ClinicalCaseCandidate",
+  "type": "object",
+  "required": [
+    "case_id",
+    "source_file",
+    "title",
+    "text",
+    "start_line",
+    "end_line",
+    "keywords"
+  ],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "chapter_id": {
+      "type": ["string", "null"]
+    },
+    "page_start": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "page_end": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "start_line": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "end_line": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "detection": {
+      "type": "object",
+      "properties": {
+        "rule": { "type": "string" },
+        "score": { "type": "number" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
+

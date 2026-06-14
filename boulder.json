@@ -1,0 +1,63 @@
+{
+  "goal": "Build a local-first scanned-book OCR/RAG lab pipeline in Python 3.11 with modular CLI and synthetic-safe repository defaults.",
+  "scope": [
+    "Chapter-level PDF splitting from config ranges",
+    "Page rendering for manual inspection",
+    "Pluggable OCR backend interface with optional backends",
+    "OCR QA summaries in JSON and Markdown",
+    "Rule-based clinical-case candidate extraction",
+    "Optional local embedding index and query path",
+    "Synthetic fixtures and tests"
+  ],
+  "inputs": [
+    "Book config YAML",
+    "Scanned source PDF path (local)",
+    "OCR JSONL outputs",
+    "Synthetic markdown/text fixtures"
+  ],
+  "outputs": [
+    "Chapter PDFs",
+    "Page renders and optional contact sheet",
+    "OCR JSONL",
+    "QA reports",
+    "Case candidate JSONL",
+    "Optional embedding index artifacts"
+  ],
+  "constraints": [
+    "Python 3.11",
+    "Use uv for env/deps",
+    "Pluggable architecture",
+    "No heavy processing in tests/scaffold task",
+    "Repo publish-safe: no raw data artifacts committed",
+    "Design page-level or small-batch processing",
+    "Target resource policy: avoid intentional >40% RAM/VRAM"
+  ],
+  "decisions": [
+    "Argparse-based CLI to minimize runtime dependencies",
+    "Backends raise MissingDependencyError when optional tools are absent",
+    "Rule-based first-pass case extraction with no medical inference",
+    "Indexing supports sentence-transformers optionally with FAISS/Chroma"
+  ],
+  "checklist": [
+    "pyproject with optional groups core/ocr/rag/dev",
+    ".gitignore excludes data and heavy artifacts",
+    "Required directory layout exists",
+    "Config, schema, docs, and README created",
+    "Commands split/render-pages/ocr/qa/extract-cases/build-index/query available",
+    "Synthetic tests present"
+  ],
+  "success_criteria": [
+    "uv run scanbook --help shows all required subcommands",
+    "Synthetic fixtures run through split->qa->extract->index->query smoke flow",
+    "No real copyrighted data required"
+  ],
+  "handoff_instructions": [
+    "Copy configs/book.example.yaml to book-specific config and adjust ranges",
+    "Run chapter split and manual page inspection first",
+    "Compare OCR backends on sample chapters before full run",
+    "Use QA report to refine OCR profile/backends",
+    "Run extraction and local index generation in batches",
+    "Optionally hand off selected chapter outputs to Gemini CLI externally"
+  ]
+}
+

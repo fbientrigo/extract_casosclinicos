@@ -1,0 +1,5 @@
+{"page_num": 1, "text": "Header A\nIntroduction text body\nFooter Z", "extractor": "synthetic", "ocr_quality": 0.95}
+{"page_num": 2, "text": "Header A\nCase details and findings\nFooter Z", "extractor": "synthetic", "ocr_quality": 0.90}
+{"page_num": 3, "text": "Header A\n\nFooter Z", "extractor": "synthetic", "ocr_quality": 0.20}
+{"page_num": 4, "text": "", "extractor": "synthetic", "ocr_quality": 0.0}
+

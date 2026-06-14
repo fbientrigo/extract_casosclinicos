@@ -1,0 +1,13 @@
+{
+  "name": "clinical_cases_llmwiki",
+  "version": "0.1",
+  "purpose": "Local curated clinical cases LLMWiki scaffold",
+  "expected_runtime": "CPU only",
+  "mutable_overlay": "data_updated/",
+  "canonical_inputs": [
+    "data/clinical_cases_bundle.duckdb",
+    "data/clinical_cases_bundle_sota_gptoss20b.duckdb",
+    "book/",
+    "llm_wiki/"
+  ]
+}

@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scanbook-rag-lab"
+version = "0.1.0"
+description = "Local-first scanned-book OCR/RAG pipeline for chapter splitting, OCR QA, case extraction, and local indexing."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+license = { text = "MIT" }
+authors = [
+  { name = "scanbook-rag-lab contributors" }
+]
+keywords = ["ocr", "rag", "pdf", "clinical-cases", "local-first"]
+dependencies = []
+
+[project.optional-dependencies]
+core = [
+  "PyYAML>=6.0.1",
+  "jsonschema>=4.22.0",
+  "pypdf>=4.2.0",
+  "pypdfium2>=4.30.0",
+  "Pillow>=10.3.0",
+  "duckdb>=1.0.0"
+]
+ocr = [
+  "PyMuPDF>=1.24.0",
+  "ocrmypdf>=16.0.0",
+  "paddleocr>=2.8.0",
+  "paddlepaddle>=2.6.0 ; platform_system != 'Darwin'"
+]
+rag = [
+  "sentence-transformers>=3.0.0",
+  "faiss-cpu>=1.8.0",
+  "chromadb>=0.5.0",
+  "numpy>=1.26.0"
+]
+dev = [
+  "pytest>=8.2.0",
+  "pytest-cov>=5.0.0",
+  "ruff>=0.5.0",
+  "mypy>=1.10.0"
+]
+# Optional, fully-local Q&A over a built index. Requires NO extra Python deps
+# (uses only the standard library); it talks to a separate Ollama process that
+# the user installs from https://ollama.com. See docs/local_llm.md.
+llm = []
+
+[project.scripts]
+scanbook = "scanbook.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
