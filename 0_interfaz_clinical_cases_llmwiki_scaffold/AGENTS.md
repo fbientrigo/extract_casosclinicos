@@ -254,6 +254,52 @@ Reglas:
 - Nunca abrir más de 3 salvo que la persona usuaria lo pida explícitamente.
 - Ofrecer abrir PDFs solo después de acotar candidatos.
 
+### Abrir un caso (PDF + texto) — opener unificado
+
+Para abrir de forma confiable en distintos PCs, usar `open_case.py` en vez de
+llamar scripts de bajo nivel:
+
+    python scripts/open_case.py <caso> --mode auto
+    python scripts/open_case.py <caso> --mode pdf
+    python scripts/open_case.py <caso> --mode text
+    python scripts/open_case.py <caso> --mode both
+    python scripts/open_case.py <caso> --diagnose
+
+Comportamiento:
+
+- `pdf`: resuelve el PDF, verifica que exista y pide abrirlo con la asociación
+  por defecto (o `--viewer edge|acrobat`).
+- `text`: escribe una transcripción UTF-8 en
+  `data_updated/<coleccion>/opened_cases/<case_id>.txt` con encabezado de
+  procedencia y la abre con `notepad.exe`. Fuente preferida: `clean_text` →
+  `llmwiki_text` → `text_preview` (esta última se marca como truncada).
+- `both`: PDF y texto.
+- `auto`: intenta el PDF; si el lanzamiento falla (o con `--fallback-text`),
+  también abre la transcripción en Notepad.
+- `--diagnose`: reporta plataforma, rutas resueltas, existencia, asociación
+  `.pdf`, visores detectados y si el lanzamiento arroja error.
+
+Regla de honestidad importante: que `os.startfile()` retorne **no** prueba que
+se abrió una ventana visible. El opener solo reporta `launch requested` o
+`launch failed`. Nunca afirmar que la ventana del visor apareció sin evidencia.
+
+#### Cómo responder pedidos en lenguaje natural (Antigravity)
+
+Mapear la intención de la docente al opener; no pedirle que ejecute scripts:
+
+| La docente dice | Acción del agente |
+|---|---|
+| "Ábreme el caso 112." | `open_case.py 112 --mode auto`; reportar ruta y `launch requested`. |
+| "Abre el PDF y también el texto." | `open_case.py 112 --mode both`. |
+| "El PDF no apareció; abre la transcripción." | `open_case.py 112 --mode text` (Notepad). |
+| "Muéstrame dónde está guardado." | Reportar la ruta exacta del PDF y/o del `.txt` en `data_updated/.../opened_cases/`. |
+| "Diagnostica por qué no se abre." | `open_case.py 112 --diagnose` y explicar el reporte. |
+
+El agente debe: (1) resolver e inspeccionar el caso; (2) usar el opener
+unificado; (3) reportar rutas exactas; (4) distinguir `file found`,
+`launch requested` y `launch failed`; (5) ofrecer Notepad como respaldo si el
+PDF no aparece; (6) nunca afirmar que una ventana GUI es visible sin evidencia.
+
 ### Mapa de búsqueda
 
     python scripts/plot_query_cases.py "casos de anemia para clase introductoria" --top 12 --neighbors 5 --open

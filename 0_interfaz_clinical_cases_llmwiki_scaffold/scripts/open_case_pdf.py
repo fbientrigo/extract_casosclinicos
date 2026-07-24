@@ -10,8 +10,8 @@ from llmwiki_common import (
     build_search_table,
     collection_from_args,
     find_pdf_for_case,
+    launch_pdf,
     load_explorer_tables,
-    open_path,
     resolve_case_id,
 )
 
@@ -39,11 +39,15 @@ def main() -> int:
         if pdf is None:
             print(f"PDF not found for {ref} -> {case_id}")
             continue
-        print(f"Opening case {row.get('case_number')} · {row.get('title_clean')}: {pdf}")
-        open_path(pdf)
-        opened += 1
+        print(f"Case {row.get('case_number')} · {row.get('title_clean')}: {pdf}")
+        result = launch_pdf(pdf)
+        if result["status"] == "launch_requested":
+            print(f"  Launch requested via {result['mechanism']} (visible window not confirmed).")
+            opened += 1
+        else:
+            print(f"  Launch failed via {result['mechanism']}: {result['error']}")
 
-    print(f"Opened {opened}/{len(args.cases)} PDFs.")
+    print(f"Launch requested for {opened}/{len(args.cases)} PDFs.")
     return 0
 
 

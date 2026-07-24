@@ -699,6 +699,210 @@ def open_path(path: Path) -> None:
         subprocess.run(["xdg-open", str(path)], check=False)
 
 
+# ---------------------------------------------------------------------------
+# Cross-machine PDF / text opening helpers.
+#
+# These are additive; open_path() above is kept unchanged for backward
+# compatibility with open_case_pdf.py. The key design rule is that launching a
+# file NEVER proves a viewer window became visible. We only ever report
+# "launch requested" (the OS accepted the request without error) or
+# "launch failed" (the launch raised). Visible-window confirmation is not
+# available from a script, so we never claim it.
+# ---------------------------------------------------------------------------
+
+def launch_pdf(path: Path, viewer: Optional[Path] = None) -> dict[str, Any]:
+    """Request the OS (or an explicit viewer) to open a PDF.
+
+    Returns a result dict with keys:
+      status:    "launch_requested" | "launch_failed" | "missing"
+      mechanism: the launch mechanism attempted
+      error:     error string if the launch raised, else None
+      path:      resolved path as string
+
+    Never returns "opened": a clean return does not prove a visible window.
+    """
+    path = Path(path)
+    result: dict[str, Any] = {
+        "status": "missing",
+        "mechanism": None,
+        "error": None,
+        "path": str(path),
+    }
+    if not path.exists():
+        result["error"] = f"File does not exist: {path}"
+        return result
+
+    resolved = path.resolve()
+    result["path"] = str(resolved)
+    system = platform.system().lower()
+    try:
+        if viewer is not None:
+            result["mechanism"] = f"subprocess:{Path(viewer).name}"
+            subprocess.Popen([str(viewer), str(resolved)])
+        elif system == "windows":
+            result["mechanism"] = "os.startfile"
+            os.startfile(str(resolved))  # type: ignore[attr-defined]
+        elif system == "darwin":
+            result["mechanism"] = "open"
+            subprocess.Popen(["open", str(resolved)])
+        else:
+            result["mechanism"] = "xdg-open"
+            subprocess.Popen(["xdg-open", str(resolved)])
+    except Exception as exc:  # noqa: BLE001 - report any launch failure verbatim
+        result["status"] = "launch_failed"
+        result["error"] = f"{type(exc).__name__}: {exc}"
+        return result
+
+    result["status"] = "launch_requested"
+    return result
+
+
+def open_in_notepad(path: Path) -> dict[str, Any]:
+    """Open a text file explicitly (notepad.exe on Windows), not via association.
+
+    Returns a result dict with keys status / mechanism / error / path.
+    """
+    path = Path(path)
+    result: dict[str, Any] = {
+        "status": "missing",
+        "mechanism": None,
+        "error": None,
+        "path": str(path),
+    }
+    if not path.exists():
+        result["error"] = f"File does not exist: {path}"
+        return result
+
+    resolved = path.resolve()
+    result["path"] = str(resolved)
+    system = platform.system().lower()
+    try:
+        if system == "windows":
+            result["mechanism"] = "notepad.exe"
+            subprocess.Popen(["notepad.exe", str(resolved)])
+        elif system == "darwin":
+            result["mechanism"] = "open -t"
+            subprocess.Popen(["open", "-t", str(resolved)])
+        else:
+            result["mechanism"] = "xdg-open"
+            subprocess.Popen(["xdg-open", str(resolved)])
+    except Exception as exc:  # noqa: BLE001
+        result["status"] = "launch_failed"
+        result["error"] = f"{type(exc).__name__}: {exc}"
+        return result
+
+    result["status"] = "launch_requested"
+    return result
+
+
+# Precedence of canonical transcription sources, best first. Each entry is
+# (field_name, is_truncated). clean_text is the full canonical case text;
+# llmwiki_text is curated markdown; text_preview is a short preview.
+CASE_TEXT_SOURCES: list[tuple[str, bool]] = [
+    ("clean_text", False),
+    ("llmwiki_text", False),
+    ("text_preview", True),
+]
+
+
+def select_case_text(row: pd.Series) -> dict[str, Any]:
+    """Pick the best available canonical transcription from a case row.
+
+    Returns {"text", "source_field", "truncated"} or text="" if none present.
+    Never synthesizes missing content.
+    """
+    for field, truncated in CASE_TEXT_SOURCES:
+        if field in row.index:
+            value = row.get(field)
+            if value is None:
+                continue
+            if isinstance(value, float) and math.isnan(value):
+                continue
+            text = str(value).strip()
+            if text:
+                return {"text": text, "source_field": field, "truncated": truncated}
+    return {"text": "", "source_field": None, "truncated": False}
+
+
+def write_case_transcript(
+    paths: CollectionPaths,
+    row: pd.Series,
+    selection: dict[str, Any],
+    pdf_path: Optional[Path] = None,
+) -> Path:
+    """Write a UTF-8 .txt transcript with a provenance header under
+    data_updated/<collection>/opened_cases/. Returns the written path.
+    """
+    case_id = str(row.get("case_id"))
+    case_number = row.get("case_number")
+    out_dir = collection_output_dir(paths, "opened_cases")
+    out_path = out_dir / f"{slugify(case_id)}.txt"
+
+    generated = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    source_field = selection.get("source_field")
+    truncated = selection.get("truncated")
+    header = [
+        "=" * 70,
+        "CASO CLINICO - TRANSCRIPCION (derivado, no canonico)",
+        "=" * 70,
+        f"collection : {paths.collection_id}",
+        f"case_number: {case_number}",
+        f"case_id    : {case_id}",
+        f"title      : {row.get('title_clean')}",
+        f"source     : {source_field or '(none)'}"
+        + ("  [TRUNCADO - vista previa, no es el texto completo]" if truncated else ""),
+        f"pdf_path   : {pdf_path if pdf_path else '(not found)'}",
+        f"generated  : {generated}",
+        "=" * 70,
+        "",
+    ]
+    out_path.write_text("\n".join(header) + selection.get("text", ""), encoding="utf-8")
+    return out_path
+
+
+def pdf_association_info() -> dict[str, Any]:
+    """Best-effort, non-sensitive report of how the OS would open a .pdf.
+
+    Windows: per-user UserChoice ProgId plus detected common viewers. Does not
+    read tokens, credentials, or general environment variables.
+    """
+    info: dict[str, Any] = {"platform": platform.system(), "pdf_progid": None, "viewers": {}}
+    if platform.system().lower() != "windows":
+        return info
+    try:
+        import winreg  # local import; Windows-only
+
+        key = r"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pdf\UserChoice"
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key) as handle:
+            info["pdf_progid"] = winreg.QueryValueEx(handle, "ProgId")[0]
+    except Exception as exc:  # noqa: BLE001
+        info["pdf_progid_error"] = f"{type(exc).__name__}"
+
+    program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+    program_files_x86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+    viewer_candidates = {
+        "edge": [
+            Path(program_files) / "Microsoft" / "Edge" / "Application" / "msedge.exe",
+            Path(program_files_x86) / "Microsoft" / "Edge" / "Application" / "msedge.exe",
+        ],
+        "acrobat": [
+            Path(program_files) / "Adobe" / "Acrobat DC" / "Acrobat" / "Acrobat.exe",
+            Path(program_files_x86) / "Adobe" / "Acrobat Reader DC" / "Reader" / "AcroRd32.exe",
+        ],
+    }
+    for name, candidates in viewer_candidates.items():
+        found = next((c for c in candidates if c.exists()), None)
+        info["viewers"][name] = str(found) if found else None
+    return info
+
+
+def resolve_viewer(name: str) -> Optional[Path]:
+    """Resolve a named viewer ('edge'/'acrobat') to an executable path, or None."""
+    info = pdf_association_info()
+    value = info.get("viewers", {}).get(name)
+    return Path(value) if value else None
+
+
 def case_summary_row(row: pd.Series, include_pdf: Optional[Path] = None) -> dict[str, Any]:
     return {
         "case_number": row.get("case_number"),
